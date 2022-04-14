@@ -12,7 +12,7 @@ Version: 1.0.1
 License: GNU v3
 
 Created: 4/8/2022
-Updated: 4/8/2022
+Updated: 4/14/2022
 
 Purpose:
     -
@@ -22,6 +22,9 @@ Considerations:
 
 To Do:
     -Figure out wait delay for websites so we don't get hit wath an IP ban (slower up until about 2min before tickets drop, then start decreasing wait time?)
+    -How are we going to tell the script what tickets to search for?
+
+    -How to subprocess a class? Or are we going to need to use threading?
 
 '''
 
@@ -35,38 +38,50 @@ import datetime
 
 
 ### DEFINE VARIABLES ###
-base_ticket_master = "" 
-url_list = [base_ticket_master]   
 
 
 #Define Selenium headless options to run in the background
-options = Options()
-options.add_argument("--headless")
-driver = webdriver.Chrome(executable_path = '../drivers/chromedriver', options = options)
+
 
 
 ### CLASSES AND FUNCTIONS ###
+class scrappy_scraping:
+    def __intit__(self, tix_vendor, url):
+        #Define and set up the headless selenium driver (chrome)
+        options = Options()
+        options.add_argument("--headless")
+        self.driver = webdriver.Chrome(executable_path = r'../drivers/chromedriver', options = options)
+
+        #Begin by validating the URL given as well as ensuring that we are able to refresh the page, click on things, and visit the cart
+        self.check_url()
+
+    #Function for checking aspects of the URL and the web page for interaction
+    def check_url():
+        print()
+
 
 
 
 ### THE THING ###
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--all", dest="all", help="Scrapes ALL ticket sites for tickets.", required=False, type=str) #Searches for provided tickets on ALL urls ()
-    parser.add_argument("-tm", "--ticket-master", dest="ticket_master", help="Scrapes only Ticket Master for tickets.", required=False, type=str) #Searches for tickets on Ticket Master only
-    args = parser.parse_args()
+    try:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-a", "--all", dest="all", help="Scrapes ALL ticket sites for tickets.", required=False, type=str) #Searches for provided tickets on ALL urls ()
+        parser.add_argument("-tm", "--ticket-master", dest="ticket_master", help="Scrapes only Ticket Master for tickets.", required=False, type=str) #Searches for tickets on Ticket Master only
+        args = parser.parse_args()
 
-    #Error checking to make sure that a site has been chosen to check for tickets
-    if args.ticket_master is not None:
-        print()
-    elif args.all is not None:
-        print()
+        #Error checking to make sure that a site has been chosen to check for tickets
+        if args.ticket_master is not None:
+            url_list = {"TicketMaster":"base_ticket_master_URL"}
+        elif args.all is not None:
+            url_list = {"TicketMaster":"base_ticket_master_URL"}
+        else:
+            print(colorama.Fore.RED + "\n\t[!] ERROR - You must make a selection of which ticket vendor to search [!]")
+            quit()
 
-    #Fetch URL
-    driver.get(base_ticket_master)
-
-
-    print('Page title: ' + driver.title)
-
-    #Quit to stay clean
-    driver.quit()
+        #Run like the wind
+        for vendor, url in url_list.items():
+            scrappy_scraping(vendor, url)
+    
+    except:
+        quit()
