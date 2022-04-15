@@ -49,11 +49,38 @@ class scrappy_scraping:
         self.sign_in_url = sign_in_url
         self.tix_count = tix_count
 
+        #Get configs for accounts
+        self.tm_email, self.tm_passwd = self.read_config()
+
         #Begin by validating the URL given. Pass/fail will determine if bot starts
         self.check_url(self, tix_url, tix_vendor)
 
         #Always exit
         exit()
+
+    #Function to read config file for account information
+    def read_config():
+        #Open the config file
+        try:
+            with open('bantix.conf') as file:
+                rows = file.readlines()
+
+                for row in rows:
+                    #Ticketmaster
+                    if "ticketmaster:" in row:
+                        try:
+                            data = row.split("ticketmaster:")[1]
+                            tm_email = data.split(":")[0]
+                            tm_passwd = data.split(":")[1]
+                        except:
+                            print(colorama.Fore.RED + "\n\t[!] ERROR - Unable to read credentials for TicketMaster in config file [!]" + colorama.Style.RESET_ALL)
+                            exit()
+
+                return tm_email, tm_passwd
+
+        except:
+            print(colorama.Fore.RED + "\n\t[!] ERROR - Unable to open config file [!]" + colorama.Style.RESET_ALL)
+            exit()
 
     #Function for checking aspects of the URL and the web page for interaction
     def check_url(self, tix_url, tix_vendor):
