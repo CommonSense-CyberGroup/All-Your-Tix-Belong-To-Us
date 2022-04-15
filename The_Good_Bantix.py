@@ -24,7 +24,8 @@ To Do:
     -Figure out wait delay for websites so we don't get hit wath an IP ban (slower up until about 2min before tickets drop, then start decreasing wait time?)
     -How are we going to tell the script what tickets to search for?
 
-    -How to subprocess a class? Or are we going to need to use threading?
+
+    -How to we want to pass in the elements that we need to click on?
 
 '''
 
@@ -32,52 +33,57 @@ To Do:
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import argparse
-import subprocess
+import threading
 import colorama
 import datetime
 import requests
 
 
 ### DEFINE VARIABLES ###
-
+ticket_list = []    #List holdling the URL to the tickets
 
 ### CLASSES AND FUNCTIONS ###
 class scrappy_scraping:
-    def __intit__(self, tix_vendor, url):
+    def __intit__(self, tix_vendor, sign_in_url, tix_url):
         #Define and set up the headless selenium driver (chrome)
         options = Options()
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(executable_path = r'../drivers/chromedriver', options = options)
 
         #Begin by validating the URL given. Pass/fail will determine if bot starts
-        valid_url = self.check_url(self, url, tix_vendor)
+        self.check_url(self, tix_url, tix_vendor)
 
         #Always exit
         exit()
 
     #Function for checking aspects of the URL and the web page for interaction
-    def check_url(self, url, tix_vendor):
+    def check_url(self, tix_url, tix_vendor):
         check_items = [":", "/", ".com", "http"]    #List of items to check in URL to ensure it is valid
         
         #URL is formatted properly
         for item in check_items:
-            if item not in url:
+            if item not in tix_url:
                 print(colorama.Fore.RED + "\n\t[!] ERROR - URL entered was not valid for vendor " + tix_vendor + "[!]" + colorama.Style.RESET_ALL)
                 quit()
 
         #URL gives us a valid return code
-        response = requests.get(url)
+        response = requests.get(tix_url)
 
         if response.status_code != 200:
             print(colorama.Fore.RED + "\n\t[!] ERROR - URL check did not give a 200 status code [!]" + colorama.Style.RESET_ALL)
             quit()
 
         #URL check passed. Start the bot
-        self.gimme_gimme(url, tix_vendor)
+        self.gimme_gimme(self, tix_url, tix_vendor, sign_in_url)
 
     #Function to actualy do the scraping and buy the tickets
-    def gimme_gimme(url, tix_vendor):
-        print()
+    def gimme_gimme(self, tix_url, tix_vendor, sign_in_url):
+        #Sign in first:
+        self.driver.get(sign_in_url)
+
+        #Kick off selenium headless
+        self.driver.get(tix_url)
+
 
 
 ### THE THING ###
@@ -90,14 +96,17 @@ if __name__ == '__main__':
 
         #Error checking to make sure that a site has been chosen to check for tickets
         if args.ticket_master is not None:
-            url_list = {"TicketMaster":"base_ticket_master_URL"}
+            ticket_list.append(args.ticket_master)
+            url_list = {"TicketMaster":"https://auth.ticketmaster.com/as/authorization.oauth2?client_id=8bf7204a7e97.web.ticketmaster.us&response_type=code&scope=openid%20profile%20phone%20email%20tm&redirect_uri=https://identity.ticketmaster.com/exchange&visualPresets=tm&lang=en-us&placementId=discovery&hideLeftPanel=false&integratorId=prd1224.ccpDiscovery&intSiteToken=tm-us&deviceId=vU49VxOT9DU4Oj09Pj4%2BPTY5OTiTuFpGqTDxTA"}
         else:
             print(colorama.Fore.RED + "\n\t[!] ERROR - You must make a selection of which ticket vendor to search and input a URL [!]" + colorama.Style.RESET_ALL)
             quit()
 
         #Run like the wind
-        for vendor, url in url_list.items():
-            scrappy_scraping(vendor, url)
+        i = 0
+        for vendor, sign_in_url in url_list.items():
+            threading.Thread(target = scrappy_scraping, args = (vendor, sign_in_url, ticket_list[i]))
+            i += 1
     
     except:
         quit()
