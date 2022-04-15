@@ -12,7 +12,7 @@ Version: 1.0.1
 License: GNU v3
 
 Created: 4/8/2022
-Updated: 4/14/2022
+Updated: 4/15/2022
 
 Purpose:
     -Scrape differnet ticket vendors. This is a bot that will auto purchase (if configured for login) tickets and send out a notification
@@ -22,10 +22,6 @@ Considerations:
 
 To Do:
     -Figure out wait delay for websites so we don't get hit wath an IP ban (slower up until about 2min before tickets drop, then start decreasing wait time?)
-    -How are we going to tell the script what tickets to search for?
-
-
-    -How to we want to pass in the elements that we need to click on?
 
 '''
 
@@ -44,11 +40,14 @@ ticket_list = []    #List holdling the URL to the tickets
 
 ### CLASSES AND FUNCTIONS ###
 class scrappy_scraping:
-    def __intit__(self, tix_vendor, sign_in_url, tix_url):
+    def __intit__(self, tix_vendor, sign_in_url, tix_url, tix_count):
         #Define and set up the headless selenium driver (chrome)
         options = Options()
         options.add_argument("--headless")
         self.driver = webdriver.Chrome(executable_path = r'../drivers/chromedriver', options = options)
+
+        self.sign_in_url = sign_in_url
+        self.tix_count = tix_count
 
         #Begin by validating the URL given. Pass/fail will determine if bot starts
         self.check_url(self, tix_url, tix_vendor)
@@ -64,25 +63,43 @@ class scrappy_scraping:
         for item in check_items:
             if item not in tix_url:
                 print(colorama.Fore.RED + "\n\t[!] ERROR - URL entered was not valid for vendor " + tix_vendor + "[!]" + colorama.Style.RESET_ALL)
-                quit()
+                exit()
 
         #URL gives us a valid return code
         response = requests.get(tix_url)
 
         if response.status_code != 200:
             print(colorama.Fore.RED + "\n\t[!] ERROR - URL check did not give a 200 status code [!]" + colorama.Style.RESET_ALL)
-            quit()
+            exit()
 
         #URL check passed. Start the bot
-        self.gimme_gimme(self, tix_url, tix_vendor, sign_in_url)
+        self.gimme_gimme(self, tix_url, tix_vendor)
 
     #Function to actualy do the scraping and buy the tickets
-    def gimme_gimme(self, tix_url, tix_vendor, sign_in_url):
-        #Sign in first:
-        self.driver.get(sign_in_url)
+    def gimme_gimme(self, tix_url, tix_vendor):
+        
+        #Bot process based on vendor
+        if tix_vendor == "TicketMaster":
+            ticketmaster(tix_vendor, tix_url)
 
-        #Kick off selenium headless
-        self.driver.get(tix_url)
+        #Function for scraping tickets from TicketMaster
+        def ticketmaster():
+            #Sign in first:
+            self.driver.get(self.sign_in_url)
+
+            self.driver.find_element_by_name("email").send_keys(self.tm_email)
+            self.driver.find_element_by_name("password").send_keys(self.tm_passwd)
+            self.driver.find_element_by_name("sign-in").click()
+
+            #Try/except to ensure we are logged in
+            try:
+                self.driver.find_element_by_name("My Account")
+            except:
+                print(colorama.Fore.RED + "\n\t[!] ERROR - Unable to log in using configured credentials for " + tix_vendor + " [!]" + colorama.Style.RESET_ALL)
+                exit()
+
+            #Kick off selenium headless and do the thing
+            self.driver.get(tix_url)
 
 
 
@@ -105,7 +122,7 @@ if __name__ == '__main__':
         #Run like the wind
         i = 0
         for vendor, sign_in_url in url_list.items():
-            threading.Thread(target = scrappy_scraping, args = (vendor, sign_in_url, ticket_list[i]))
+            threading.Thread(target = scrappy_scraping, args = (vendor, sign_in_url, ticket_list[i], args.count,))
             i += 1
     
     except:
